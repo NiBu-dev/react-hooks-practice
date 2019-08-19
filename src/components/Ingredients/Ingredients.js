@@ -1,4 +1,4 @@
-import React, { useReducer, useEffect, useCallback } from 'react';
+import React, { useReducer, useEffect, useCallback, useMemo } from 'react';
 
 import IngredientForm from './IngredientForm';
 import Search from './Search';
@@ -21,15 +21,15 @@ const ingredientReducer = (state, action) => {
 }
 
 const httpReducer = (state, action) => {
-  switch(action.type) {
+  switch (action.type) {
     case 'SEND_REQUEST':
-      return {loading: true, error: null}
+      return { loading: true, error: null }
     case 'RESPONSE':
-      return {...state,loading: null}
+      return { ...state, loading: null }
     case 'ERROR':
-      return {loading: false, error: action.errorData}
+      return { loading: false, error: action.errorData }
     case 'CLEAR':
-      return {...state, error: null}
+      return { ...state, error: null }
     default:
       throw new Error('Should not be reached');
   }
@@ -37,47 +37,52 @@ const httpReducer = (state, action) => {
 
 const Ingredients = () => {
   const [userIngredients, dispatch] = useReducer(ingredientReducer, []);
-  const [httpState, dispatchHttp] = useReducer(httpReducer, {loading: false, error: null})
+  const [httpState, dispatchHttp] = useReducer(httpReducer, { loading: false, error: null })
 
 
   useEffect(() => {
     console.log('RENDERING INGREDIENTS', userIngredients)
   }, [userIngredients])
 
-  const addIngredientHandler = ingredient => {
-    dispatchHttp({type: 'SEND_REQUEST'})
+  const addIngredientHandler = useCallback(ingredient => {
+    dispatchHttp({ type: 'SEND_REQUEST' })
     fetch('https://ingredient-maker-hooks-up.firebaseio.com/ingredients.json', {
       method: 'POST',
       body: JSON.stringify(ingredient),
       headers: { 'Content-Type': 'application/json' }
     }).then((response) => {
-      dispatchHttp({type: 'RESPONSE'})
+      dispatchHttp({ type: 'RESPONSE' })
       return response.json();
     }).then((responseData) => {
       dispatch({ type: 'ADD', ingredient: { id: responseData.name, ...ingredient } })
     }) // browser function - API
-  }
+  }, [])
 
   const filteredIngredientsHandler = useCallback((ingredients) => {
     dispatch({ type: 'SET', ingredients: ingredients })
 
   }, [])
 
-  const removeIngredientHandler = id => {
-    dispatchHttp({type: 'SEND_REQUEST'})
+  const removeIngredientHandler = useCallback((id) => {
+    dispatchHttp({ type: 'SEND_REQUEST' })
     fetch(`https://ingredient-maker-hooks-up.firebaseio.com/ingredients/${id}.json`, {
       method: 'DELETE'
     }).then(response => {
-      dispatchHttp({type: 'RESPONSE'})
+      dispatchHttp({ type: 'RESPONSE' })
       dispatch({ type: 'DELETE', id: id })
     }).catch((error) => {
-      dispatchHttp({type: 'Error', errorData: 'Something went really wrong'})
+      dispatchHttp({ type: 'Error', errorData: 'Something went really wrong' })
     })
-  }
+  }, []) // second argument is an array of dependencies
 
-  const clearError = () => {
-    dispatchHttp({type: 'CLEAR'})
-  }
+  const clearError =  useCallback(() => {
+    dispatchHttp({ type: 'CLEAR' })
+  }, [])
+
+  const ingredientList = useMemo(() => {
+    return <IngredientList ingredients={userIngredients} onRemoveItem={(id) => removeIngredientHandler(id)} />
+
+  }, [userIngredients, removeIngredientHandler])
 
   return (
     <div className="App">
@@ -86,11 +91,10 @@ const Ingredients = () => {
 
       <section>
         <Search onLoadIngredients={filteredIngredientsHandler} />
-        {/* Need to add list here! */}
-        <IngredientList ingredients={userIngredients} onRemoveItem={(id) => removeIngredientHandler(id)} />
+        {ingredientList}
       </section>
     </div>
   );
-}
+};
 
 export default Ingredients;
