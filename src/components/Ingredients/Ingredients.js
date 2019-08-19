@@ -1,4 +1,4 @@
-import React, { useReducer, useState, useEffect, useCallback } from 'react';
+import React, { useReducer, useEffect, useCallback } from 'react';
 
 import IngredientForm from './IngredientForm';
 import Search from './Search';
@@ -20,69 +20,69 @@ const ingredientReducer = (state, action) => {
   }
 }
 
+const httpReducer = (state, action) => {
+  switch(action.type) {
+    case 'SEND_REQUEST':
+      return {loading: true, error: null}
+    case 'RESPONSE':
+      return {...state,loading: null}
+    case 'ERROR':
+      return {loading: false, error: action.errorData}
+    case 'CLEAR':
+      return {...state, error: null}
+    default:
+      throw new Error('Should not be reached');
+  }
+}
+
 const Ingredients = () => {
-  const [userIngredients, dispatch] = useReducer(ingredientReducer, [])
-  // const [userIngredients, setUserIngredients] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState();
+  const [userIngredients, dispatch] = useReducer(ingredientReducer, []);
+  const [httpState, dispatchHttp] = useReducer(httpReducer, {loading: false, error: null})
+
 
   useEffect(() => {
     console.log('RENDERING INGREDIENTS', userIngredients)
   }, [userIngredients])
 
   const addIngredientHandler = ingredient => {
-    setIsLoading(true);
+    dispatchHttp({type: 'SEND_REQUEST'})
     fetch('https://ingredient-maker-hooks-up.firebaseio.com/ingredients.json', {
       method: 'POST',
       body: JSON.stringify(ingredient),
       headers: { 'Content-Type': 'application/json' }
     }).then((response) => {
-      setIsLoading(false);
+      dispatchHttp({type: 'RESPONSE'})
       return response.json();
     }).then((responseData) => {
-
-      // setUserIngredients(prevIngredients => [...prevIngredients, { id: responseData.name, ...ingredient }]);
       dispatch({ type: 'ADD', ingredient: { id: responseData.name, ...ingredient } })
     }) // browser function - API
   }
 
   const filteredIngredientsHandler = useCallback((ingredients) => {
-    // setUserIngredients(ingredients)
     dispatch({ type: 'SET', ingredients: ingredients })
 
   }, [])
 
   const removeIngredientHandler = id => {
-    setIsLoading(true);
+    dispatchHttp({type: 'SEND_REQUEST'})
     fetch(`https://ingredient-maker-hooks-up.firebaseio.com/ingredients/${id}.json`, {
       method: 'DELETE'
     }).then(response => {
-      setIsLoading(false);
-      // setUserIngredients(prevIngredients => {
-      //   let newUserIngredients = prevIngredients.filter((ingredient) => {
-      //     if (id === ingredient.id) {
-      //       return false
-      //     } else {
-      //       return true
-      //     }
-      //   })
-      //   return newUserIngredients;
-      // })
+      dispatchHttp({type: 'RESPONSE'})
       dispatch({ type: 'DELETE', id: id })
     }).catch((error) => {
-      setError('The Human Civilization is going to ENDDDD')
+      dispatchHttp({type: 'Error', errorData: 'Something went really wrong'})
     })
   }
 
   const clearError = () => {
-    setError(null);
-    setIsLoading(false);
+    dispatchHttp({type: 'CLEAR'})
   }
 
   return (
     <div className="App">
-      {error && <ErrorModal onClose={clearError}>{error}</ErrorModal>}
-      <IngredientForm onAddIngredient={addIngredientHandler} loading={isLoading} />
+      {httpState.error && <ErrorModal onClose={clearError}>{httpState.error}</ErrorModal>}
+      <IngredientForm onAddIngredient={addIngredientHandler} loading={httpState.loading} />
 
       <section>
         <Search onLoadIngredients={filteredIngredientsHandler} />
