@@ -3,5 +3,9 @@ import ReactDOM from 'react-dom';
 
 import './index.css';
 import App from './App';
+import AuthContexProvider from './context/auth-context';
 
-ReactDOM.render(<App />, document.getElementById('root'));
+
+ReactDOM.render(<AuthContexProvider>
+    <App />
+</AuthContexProvider>, document.getElementById('root'));
