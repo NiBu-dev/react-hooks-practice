@@ -2,8 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 
 import Card from '../UI/Card';
 import './Search.css';
+import useHttp from '../../hooks/http';
 
 const Search = React.memo(props => {
+  const {isLoading, data, error, sendRequest, clear} = useHttp()
+
+
   const { onLoadIngredients } = props;
   const [enteredFilter, setEnteredFilter] = useState('');
   const inputRef = useRef();
